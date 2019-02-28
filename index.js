@@ -1,114 +1,95 @@
-window.onload = function() {
-  // Create constants
-  const section = document.querySelector('section');
-  const videos = [
-    { 'name' : 'crystal' },
-    { 'name' : 'elf' },
-    { 'name' : 'frog' },
-    { 'name' : 'monster' },
-    { 'name' : 'pig' },
-    { 'name' : 'rabbit' }
-  ];
-  // Create an instance of a db object for us to store our database in
-  let db;
+window.onload = function(){
+  /*变量定义：
+  1.html DOM变量： audio，
+  2.audio
+  3.db
+  */
+ const section =document.querySelector('section');
+ const audios = [
+   {'name':'王菲心经'},
+   {'name':'金刚经'}
+ ];
+ let db;
+   /*方法定义:
+  初始化：对播放列表进行判断，如果本地indexdb有，则（播放），如果没有则（远程获取）；
+    ---播放：获取src数据源的url，挂载audio元素
+    ---远程获取：远程获取数据，（播放），（保存数据）
+         ---保存数据：
+  */
+  /*
+ 主线：打开数据库，成功后，初始化
+  */
 
-function init() {
-  // Loop through the video names one by one
-  for(let i = 0; i < videos.length; i++) {
-    // Open transaction, get object store, and get() each video by name
-    let objectStore = db.transaction('videos').objectStore('videos');
-    let request = objectStore.get(videos[i].name);
-    request.onsuccess = function() {
-      // If the result exists in the database (is not undefined)
-      if(request.result) {
-        // Grab the videos from IDB and display them using displayVideo()
-        console.log('taking videos from IDB');
-        displayVideo(request.result.mp4, request.result.webm, request.result.name);
-      } else {
-        // Fetch the videos from the network
-        fetchVideoFromNetwork(videos[i]);
-      }
+function init(){
+  for(let i=0;i<audios.length;i++){
+    let objectStore=db.transaction('audios').objectStore('audios');
+    let request = objectStore.get(audios[i].name);
+    request.onerror= function () {
+      alert("出错了")
     };
+    request.onsuccess = function(){
+      if(request.result){
+        console.log("读取本地数据");
+        displayAudio(request.result.mp3,request.result.name); 
+      }else {
+        fetchAudioFromNetwork(audios[i]);
+      }
+    }
   }
-}
-
-  // Define the fetchVideoFromNetwork() function
-  function fetchVideoFromNetwork(video) {
-    console.log('fetching videos from network');
-    // Fetch the MP4 and WebM versions of the video using the fetch() function,
-    // then expose their response bodies as blobs
-    let mp4Blob = fetch('videos/' + video.name + '.mp4').then(response =>
-      response.blob()
-    );
-    let webmBlob = fetch('videos/' + video.name + '.webm').then(response =>
-      response.blob()
-    );
-
-    // Only run the next code when both promises have fulfilled
-    Promise.all([mp4Blob, webmBlob]).then(function(values) {
-      // display the video fetched from the network with displayVideo()
-      displayVideo(values[0], values[1], video.name);
-      // store it in the IDB using storeVideo()
-      storeVideo(values[0], values[1], video.name);
-    });
-  }
-
-  // Define the storeVideo() function
-function storeVideo(mp4Blob, webmBlob, name) {
-  // Open transaction, get object store; make it a readwrite so we can write to the IDB
-  let objectStore = db.transaction(['videos'], 'readwrite').objectStore('videos');
-  // Create a record to add to the IDB
-  let record = {
-    mp4 : mp4Blob,
-    webm : webmBlob,
-    name : name
-  }
-
-  // Add the record to the IDB using add()
-  let request = objectStore.add(record);
-
-  request.onsuccess = function() {
-    console.log('Record addition attempt finished');
-  }
-
-  request.onerror = function() {
-    console.log(request.error);
-  }
-
 };
 
-  // Define the displayVideo() function
-  function displayVideo(mp4Blob, webmBlob, title) {
-    // Create object URLs out of the blobs
-    let mp4URL = URL.createObjectURL(mp4Blob);
-    let webmURL = URL.createObjectURL(webmBlob);
+function displayAudio (mp3Blob,title){
+  console.log(mp3Blob);
+  let mp3url = URL.createObjectURL(mp3Blob);  
+  const audio = document.createElement('audio');
 
-    // Create DOM elements to embed video in the page
-    let article = document.createElement('article');
-    let h2 = document.createElement('h2');
-    h2.textContent = title;
-    let video = document.createElement('video');
-    video.controls = true;
-    let source1 = document.createElement('source');
-    source1.src = mp4URL;
-    source1.type = 'video/mp4';
-    let source2 = document.createElement('source');
-    source2.src = webmURL;
-    source2.type = 'video/webm';
+  let article = document.createElement('article');
+  let h2 = document.createElement('h2');
+  h2.textContent = title;
+  audio.src = mp3url;
+  audio.controls = true;
+  section.appendChild(article);
+  article.appendChild(h2);
+  h2.appendChild(audio);   
+}
 
-    // Embed DOM elements into page
-    section.appendChild(article);
-    article.appendChild(h2);
-    article.appendChild(video);
-    video.appendChild(source1);
-    video.appendChild(source2);
+function fetchAudioFromNetwork(audio){
+  // fetch('audio/'+audio.name+'.mp3').then(response=>{
+  //   response.blob();}).then(function(value){
+  //     displayAudio(value,audio.name);
+  //     storeAudio(value,audio.name);
+  //   });
+
+  let mp3Blob = fetch('audio/' + audio.name + '.mp3').then(response =>
+    response.blob()
+  );
+  // Only run the next code when both promises have fulfilled
+  Promise.all([mp3Blob]).then(function(values) {
+    // display the video fetched from the network with displayVideo()
+    displayAudio(values[0],audio.name);
+    // store it in the IDB using storeVideo()
+    storeAudio(values[0],audio.name);
+  });
+}
+
+function storeAudio(mp3Blob,name){
+  let objectStore = db.transaction(['audios'],'readwrite').objectStore('audios');
+
+  let record = {
+    name: name,
+    mp3: mp3Blob
   }
+  let request = objectStore.add(record);
+  request.onerror=function (){
+    console.log(request.error);
+  };
+  request.onsuccess=function(){
+    console.log('Record addition attempt finished');
+  };
+}
 
-  // Open our database; it is created if it doesn't already exist
-  // (see onupgradeneeded below)
-  let request = window.indexedDB.open('videos', 1);
+  let request = window.indexedDB.open('audios',1);
 
-  // onerror handler signifies that the database didn't open successfully
   request.onerror = function() {
     console.log('Database failed to open');
   };
@@ -116,26 +97,18 @@ function storeVideo(mp4Blob, webmBlob, name) {
   // onsuccess handler signifies that the database opened successfully
   request.onsuccess = function() {
     console.log('Database opened succesfully');
-
     // Store the opened database object in the db variable. This is used a lot below
     db = request.result;
     init();
   };
 
-  // Setup the database tables if this has not already been done
-  request.onupgradeneeded = function(e) {
-
-    // Grab a reference to the opened database
+  request.onupgradeneeded=function(e){
     let db = e.target.result;
-
-    // Create an objectStore to store our notes in (basically like a single table)
-    // including a auto-incrementing key
-    let objectStore = db.createObjectStore('videos', { keyPath: 'name' });
-
-    // Define what data items the objectStore will contain
-    objectStore.createIndex('mp4', 'mp4', { unique: false });
-    objectStore.createIndex('webm', 'webm', { unique: false });
-
-    console.log('Database setup complete');
+    let objectStore = db.createObjectStore('audios',{keyPath:'name'});
+    objectStore.createIndex('mp3','mp3',{unique:false});
+    console.log(request.error);
   };
 };
+
+
+
